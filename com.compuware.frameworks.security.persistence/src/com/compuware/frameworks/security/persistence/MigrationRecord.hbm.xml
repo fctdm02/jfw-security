@@ -1,0 +1,66 @@
+<?xml version="1.0"?>
+<!DOCTYPE hibernate-mapping PUBLIC
+        "-//Hibernate/Hibernate Mapping DTD 3.0//EN"
+        "http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
+
+<hibernate-mapping package="com.compuware.frameworks.security.service.api.model" default-lazy="false">
+
+    <class name="MigrationRecord" table="MIGRATION_RECORD">
+
+        <cache usage="nonstrict-read-write" />
+        
+        <id name="migrationRecordId" 
+            column="MIGRATION_RECORD_ID" 
+            unsaved-value="null" 
+            type="java.lang.Long"> 
+            <generator class="native" /> 
+        </id>
+        
+        <natural-id mutable="false">
+        	<many-to-one name="multiTenancyRealm" class="MultiTenancyRealm" column="MULTI_TENANCY_REALM_ID" not-null="true"/>
+        
+        	<property name="sourceRepositoryName"
+	            type="string"
+    	        access="property"
+        	    length="128"
+            	column="SOURCE_REPOSITORY_NAME"/>
+
+            <property name="principalType"
+                type="string"
+                access="property"
+                length="8"
+                column="PRINCIPAL_TYPE"/>
+
+            <property name="principalName"
+                type="string"
+                access="property"
+                length="256"
+                column="PRINCIPAL_NAME"/>
+                
+            <property name="creationDate"
+                type="string"
+                access="property"
+                length="16"
+                column="CREATION_DATE"/>
+                
+	        <property name="reason"
+	            type="string"
+	            access="property"
+	            length="256"
+	            column="REASON"/>               
+        </natural-id>
+                        
+	    <version name="version" 
+	        column="VERSION" 
+	        type="java.lang.Integer"
+	        unsaved-value="null"/>
+                   
+        <property name="nameValuePairs"
+            type="string"
+            access="property"
+            length="2048"
+            column="NAME_VALUE_PAIRS"/>
+        
+    </class>
+
+</hibernate-mapping>

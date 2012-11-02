@@ -1,0 +1,75 @@
+<?xml version="1.0"?>
+<!DOCTYPE hibernate-mapping PUBLIC
+        "-//Hibernate/Hibernate Mapping DTD 3.0//EN"
+        "http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
+
+<hibernate-mapping package="com.compuware.frameworks.security.service.api.model" default-lazy="false">
+
+    <class name="SecurityRole" table="SECURITY_ROLE">
+
+        <cache usage="nonstrict-read-write" />
+        
+        <id name="securityRoleId" 
+            column="SECURITY_ROLE_ID"  
+            unsaved-value="null" 
+            type="java.lang.Long"> 
+            <generator class="native" /> 
+        </id>
+
+        <natural-id mutable="false">
+            <many-to-one name="multiTenancyRealm" class="MultiTenancyRealm" column="MULTI_TENANCY_REALM_ID" not-null="true" fetch="join"/>
+
+            <property name="roleName"
+                type="string"
+                access="property"
+                column="ROLE_NAME"
+                length="256" />
+        </natural-id>
+        
+	    <version name="version" 
+	        column="VERSION" 
+	        type="java.lang.Integer"
+	        unsaved-value="null"/>
+
+        <property name="displayName"
+            type="string"
+            access="property"
+            column="DISPLAY_NAME"
+            length="256" />
+                        
+        <property name="description"
+            type="string"
+            access="property"
+            column="DESCRIPTION"
+            length="256" />      
+            
+        <property name="assignByDefault"
+            type="boolean"
+            access="property"
+            column="ASSIGN_BY_DEFAULT" />
+
+        <property name="isDeletable"
+            type="boolean"
+            access="property"
+            column="IS_DELETABLE"/>
+
+        <property name="isModifiable"
+            type="boolean"
+            access="property"
+            column="IS_MODIFIABLE"/>
+                                                                                               
+        <set name="memberSecurityPrincipals" table="SECURITY_ROLE_MEMBER" fetch="join" lazy="false" optimistic-lock="false">
+           <cache usage="nonstrict-read-write" />
+           <key column="SECURITY_ROLE_ID"/> 
+           <many-to-many column="MEMBER_SECURITY_PRINCIPAL_ID" class="SecurityPrincipal" not-found="ignore"/> 
+        </set>                 
+
+        <set name="includedSecurityRoles" table="SECURITY_ROLE_HIERARCHY" fetch="join" lazy="false" optimistic-lock="false">
+           <cache usage="nonstrict-read-write" />
+           <key column="SECURITY_ROLE_ID"/> 
+           <many-to-many column="INCLUDED_SECURITY_ROLE_ID" class="SecurityRole" not-found="ignore"/> 
+        </set>                 
+        
+    </class>
+
+</hibernate-mapping>

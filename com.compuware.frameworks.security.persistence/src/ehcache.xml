@@ -1,0 +1,305 @@
+<ehcache>
+
+    <!-- Sets the path to the directory where cache .data files are created. -->
+    <diskStore path="java.io.tmpdir/hibernate"/>
+
+    <!--Default Cache configuration. These will applied to caches programmatically created through
+        the CacheManager. The following attributes are required for defaultCache:
+
+        maxInMemory       - Sets the maximum number of objects that will be created in memory
+        eternal           - Sets whether elements are eternal. If eternal, timeouts are ignored 
+                            and the element is never expired.
+        timeToIdleSeconds - Sets the time to idle for an element before it expires. Is only used
+                            if the element is not eternal. Idle time is now - last accessed time
+        timeToLiveSeconds - Sets the time to live for an element before it expires. Is only used
+                            if the element is not eternal. TTL is now - creation time
+        overflowToDisk    - Sets whether elements can overflow to disk when the in-memory cache
+                            has reached the maxInMemory limit. -->
+    <defaultCache
+        maxElementsInMemory="10000"
+        eternal="true"
+        overflowToDisk="false"
+        />
+
+
+
+    <!-- REALM DOMAIN OBJECTS (AND THEIR COLLECTIONS) -->
+    <cache name="com.compuware.frameworks.security.service.api.model.MultiTenancyRealm"
+        maxElementsInMemory="10"
+        eternal="true"
+        overflowToDisk="false"
+        />
+
+    <cache name="com.compuware.frameworks.security.service.api.model.MultiTenancyRealm.passwordPolicies"
+        maxElementsInMemory="20"
+        eternal="true"
+        overflowToDisk="false"
+        />                    
+        
+    <cache name="com.compuware.frameworks.security.service.api.model.PasswordPolicy"
+        maxElementsInMemory="20"
+        eternal="true"
+        overflowToDisk="false"
+        />                    
+                
+
+
+    <!-- ROLE DOMAIN OBJECTS (AND THEIR COLLECTIONS) -->
+    <cache name="com.compuware.frameworks.security.service.api.model.SecurityRole"
+        maxElementsInMemory="20"
+        eternal="true"
+        overflowToDisk="false"
+        />
+
+    <cache name="com.compuware.frameworks.security.service.api.model.SecurityRole.memberSecurityPrincipals"
+        maxElementsInMemory="2000"
+        eternal="true"
+        overflowToDisk="false"
+        />                    
+
+    <cache name="com.compuware.frameworks.security.service.api.model.SecurityRole.includedSecurityRoles"
+        maxElementsInMemory="40"
+        eternal="true"
+        overflowToDisk="false"
+        />                    
+
+
+
+    <!-- SECURITY PRINCIPAL DOMAIN OBJECTS (AND THEIR COLLECTIONS) -->
+    <!-- SecurityPrincipal -->
+    <cache name="com.compuware.frameworks.security.service.api.model.SecurityPrincipal"
+        maxElementsInMemory="5000"
+        eternal="true"
+        overflowToDisk="false"
+        />
+
+    <!-- AbstractUser -->
+    <cache name="com.compuware.frameworks.security.service.api.model.AbstractUser"
+        maxElementsInMemory="500"
+        eternal="true"
+        overflowToDisk="false"
+        />
+
+    <!-- AbstractGroup -->
+    <cache name="com.compuware.frameworks.security.service.api.model.AbstractGroup"
+        maxElementsInMemory="500"
+        eternal="true"
+        overflowToDisk="false"
+        />
+    
+    <!-- SystemUser -->
+    <cache name="com.compuware.frameworks.security.service.api.model.SystemUser"
+        maxElementsInMemory="5"
+        eternal="true"
+        overflowToDisk="false"
+        />
+    
+    <!-- SecurityUser -->
+    <cache name="com.compuware.frameworks.security.service.api.model.SecurityUser"
+        maxElementsInMemory="100"
+        eternal="true"
+        overflowToDisk="false"
+        />
+
+    <cache name="com.compuware.frameworks.security.service.api.model.SecurityUser.passwords"
+        maxElementsInMemory="500"
+        eternal="true"
+        overflowToDisk="false"
+        />
+                            
+    <cache name="com.compuware.frameworks.security.service.api.model.Password"
+        maxElementsInMemory="500"
+        eternal="true"
+        overflowToDisk="false"
+        />                            
+
+    <!-- SecurityGroup -->
+    <cache name="com.compuware.frameworks.security.service.api.model.SecurityGroup"
+        maxElementsInMemory="500"
+        eternal="true"
+        overflowToDisk="false"
+        />
+
+    <cache name="com.compuware.frameworks.security.service.api.model.SecurityGroup.memberUsers"
+        maxElementsInMemory="5000"
+        eternal="true"
+        overflowToDisk="false"
+        />
+
+    <!-- ShadowSecurityUser -->
+    <cache name="com.compuware.frameworks.security.service.api.model.ShadowSecurityUser"
+        maxElementsInMemory="100"
+        eternal="true"
+        overflowToDisk="false"
+        />
+
+    <!-- ShadowSecurityGroup -->
+    <cache name="com.compuware.frameworks.security.service.api.model.ShadowSecurityGroup"
+        maxElementsInMemory="500"
+        eternal="true"
+        overflowToDisk="false"
+        />
+
+
+
+    <!-- MISC. DOMAIN OBJECTS -->
+    <cache name="com.compuware.frameworks.security.service.api.model.AuditEvent"
+        maxElementsInMemory="500"
+        eternal="false"
+        timeToIdleSeconds="300"
+        timeToLiveSeconds="300"
+        overflowToDisk="false"
+        />
+        
+    <cache name="com.compuware.frameworks.security.service.api.model.MigrationRecord"
+        maxElementsInMemory="200"
+        eternal="false"
+        timeToIdleSeconds="300"
+        timeToLiveSeconds="300"        
+        overflowToDisk="false"
+        />
+        
+        
+                
+    <!-- QUERY CACHES -->            
+    <cache
+        name="org.hibernate.cache.StandardQueryCache"
+        maxElementsInMemory="50"
+        eternal="false"
+        timeToLiveSeconds="120"
+        overflowToDisk="true"
+        />
+
+    <cache name="org.hibernate.cache.UpdateTimestampsCache"
+        maxElementsInMemory="5000"
+        eternal="true"
+        overflowToDisk="false"
+        />
+        
+    <cache name="com.compuware.frameworks.security.persistence.getMultiTenancyRealmByRealmName"
+        maxElementsInMemory="10"
+        eternal="true"
+        overflowToDisk="false"
+        />
+
+    <cache name="com.compuware.frameworks.security.persistence.getAllMultiTenancyRealms"
+        maxElementsInMemory="10"
+        eternal="true"
+        overflowToDisk="false"
+        />
+          
+    <cache name="com.compuware.frameworks.security.persistence.getDomainObjectById"
+        maxElementsInMemory="1000"
+        eternal="true"
+        overflowToDisk="false"
+        />
+
+    <cache name="com.compuware.frameworks.security.persistence.getSecurityPrincipal"
+        maxElementsInMemory="1000"
+        eternal="true"
+        overflowToDisk="false"
+        />
+
+    <cache name="com.compuware.frameworks.security.persistence.getSecurityUser"
+        maxElementsInMemory="1000"
+        eternal="true"
+        overflowToDisk="false"
+        />
+
+    <cache name="com.compuware.frameworks.security.persistence.getSystemUser"
+        maxElementsInMemory="1000"
+        eternal="true"
+        overflowToDisk="false"
+        />
+
+    <cache name="com.compuware.frameworks.security.persistence.getShadowSecurityUser"
+        maxElementsInMemory="1000"
+        eternal="true"
+        overflowToDisk="false"
+        />
+        
+    <cache name="com.compuware.frameworks.security.persistence.getAllSecurityUsers"
+        maxElementsInMemory="1000"
+        eternal="true"
+        overflowToDisk="false"
+        />
+
+    <cache name="com.compuware.frameworks.security.persistence.getAllActiveSecurityUsers"
+        maxElementsInMemory="1000"
+        eternal="true"
+        overflowToDisk="false"
+        />
+
+    <cache name="com.compuware.frameworks.security.persistence.getAllInactiveSecurityUsers"
+        maxElementsInMemory="1000"
+        eternal="true"
+        overflowToDisk="false"
+        />
+
+    <cache name="com.compuware.frameworks.security.persistence.getAllSystemUsers"
+        maxElementsInMemory="1000"
+        eternal="true"
+        overflowToDisk="false"
+        />
+
+    <cache name="com.compuware.frameworks.security.persistence.getAllUsers"
+        maxElementsInMemory="1000"
+        eternal="true"
+        overflowToDisk="false"
+        />
+        
+    <cache name="com.compuware.frameworks.security.persistence.getAllSecurityGroups"
+        maxElementsInMemory="1000"
+        eternal="true"
+        overflowToDisk="false"
+        />
+
+    <cache name="com.compuware.frameworks.security.persistence.getAllGroups"
+        maxElementsInMemory="1000"
+        eternal="true"
+        overflowToDisk="false"
+        />
+        
+    <cache name="com.compuware.frameworks.security.persistence.getAbstractGroup"
+        maxElementsInMemory="1000"
+        eternal="true"
+        overflowToDisk="false"
+        />
+        
+    <cache name="com.compuware.frameworks.security.persistence.getSecurityRole"
+        maxElementsInMemory="1000"
+        eternal="true"
+        overflowToDisk="false"
+        />
+
+    <cache name="com.compuware.frameworks.security.persistence.getAllSecurityRoles"
+        maxElementsInMemory="1000"
+        eternal="true"
+        overflowToDisk="false"
+        />
+
+    <cache name="com.compuware.frameworks.security.persistence.getAllSecurityRolesForUser"
+        maxElementsInMemory="1000"
+        eternal="true"
+        overflowToDisk="false"
+        />
+
+    <cache name="com.compuware.frameworks.security.persistence.getAllSecurityRolesForGroup"
+        maxElementsInMemory="1000"
+        eternal="true"
+        overflowToDisk="false"
+        />
+
+    <cache name="com.compuware.frameworks.security.persistence.getAllSecurityRolesForSecurityPrincipal"
+        maxElementsInMemory="1000"
+        eternal="true"
+        overflowToDisk="false"
+        />
+
+    <cache name="com.compuware.frameworks.security.persistence.MigrationRecords"
+        maxElementsInMemory="1000"
+        eternal="true"
+        overflowToDisk="false"
+        />
+                                       
+</ehcache>

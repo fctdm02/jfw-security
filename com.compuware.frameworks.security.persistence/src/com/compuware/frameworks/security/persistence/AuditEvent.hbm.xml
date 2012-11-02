@@ -1,0 +1,60 @@
+<?xml version="1.0"?>
+<!DOCTYPE hibernate-mapping PUBLIC
+        "-//Hibernate/Hibernate Mapping DTD 3.0//EN"
+        "http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
+
+<hibernate-mapping package="com.compuware.frameworks.security.service.api.model" default-lazy="false">
+
+    <class name="AuditEvent" table="AUDIT_EVENT" mutable="false">
+
+        <cache usage="read-only" />
+        
+        <id name="auditEventId" 
+            column="AUDIT_EVENT_ID"
+            unsaved-value="null" 
+            type="java.lang.Long"> 
+            <generator class="native" /> 
+        </id>
+            
+        <natural-id mutable="false">
+
+	        <property name="initiatingUsername"
+	            type="string"
+	            access="property"
+	            length="256"
+	            column="INITIATING_USERNAME"/>
+
+            <property name="eventDetails"
+	            type="string"
+	            access="property"
+	            length="256"
+	            column="EVENT_DETAILS"/>
+	
+	        <property name="originatingIpAddress"
+	            type="string"
+	            access="property"
+	            length="256"
+	            column="ORIGINATING_IP_ADDRESS"/>
+	
+	        <property name="originatingHostname"
+	            type="string"
+	            access="property"
+	            length="256"
+	            column="ORIGINATING_HOSTNAME"/>
+                
+            <property name="eventDate"
+                type="timestamp"
+                access="property"
+                column="EVENT_DATE"
+                index="EVENT_DATE_INDEX"/>
+
+            <property name="realmName"
+                type="string"
+                access="property"
+                length="256"
+                column="REALM_NAME"/>
+        </natural-id>
+            
+    </class>
+        
+</hibernate-mapping>

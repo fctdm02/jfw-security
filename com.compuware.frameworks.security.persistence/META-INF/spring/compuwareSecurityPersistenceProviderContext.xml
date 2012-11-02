@@ -1,0 +1,251 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns="http://www.springframework.org/schema/beans"  
+    xmlns:security="http://www.springframework.org/schema/security"  
+    xmlns:p="http://www.springframework.org/schema/p"      
+    xmlns:osgi="http://www.springframework.org/schema/osgi"
+    xmlns:aop="http://www.springframework.org/schema/aop"
+    xmlns:tx="http://www.springframework.org/schema/tx"    
+    xsi:schemaLocation="http://www.springframework.org/schema/beans 
+        http://www.springframework.org/schema/beans/spring-beans-3.0.xsd
+        http://www.springframework.org/schema/security 
+        http://www.springframework.org/schema/security/spring-security-3.0.xsd
+        http://www.springframework.org/schema/osgi
+        http://www.springframework.org/schema/osgi/spring-osgi.xsd
+        http://www.springframework.org/schema/tx
+        http://www.springframework.org/schema/tx/spring-tx-3.0.xsd
+        http://www.springframework.org/schema/aop 
+        http://www.springframework.org/schema/aop/spring-aop-3.0.xsd
+        ">
+
+   <!-- ************************************************************************************ -->
+   <!-- Bootstrap bean class.  This is used for clients that want to access services via the -->
+   <!-- singleton instance here, that is accessible outside of Spring via the:               -->
+   <!--                                                                                      -->
+   <!--    PersistenceProvider.getInstance()                                                 -->
+   <!--                                                                                      -->
+   <!-- call. It is preferred, however, that clients use the Spring/OSGi approach            -->
+   <!-- (i.e. import the Spring beans as OSGi "services" that are exported here:             -->
+   <!--                                                                                      -->
+   <!-- OSGi Service ID</b> (Interface in com.compuware.frameworks.security.persistence.dao) -->
+   <!-- ************************************************************************************ -->
+   <!-- auditEventDao                  IAuditEventDao                                        -->
+   <!-- migrationRecordDao             IMigrationRecordDao                                   -->
+   <!-- multiTenancyRealmDao           IMultiTenancyRealmDao                                 -->
+   <!-- securityPrincipalDao           ISecurityPrincipalDao                                 -->
+   <!-- securityRoleDao                ISecurityRoleDao                                      -->
+   <!-- ************************************************************************************ -->
+   <bean 
+      id="persistenceProvider" 
+      class="com.compuware.frameworks.security.persistence.PersistenceProvider" 
+      scope="singleton">
+   </bean>	
+
+
+
+   <!-- ************************************************************************************ -->
+   <!-- OSGi imports from the "core" layer                                                   -->
+   <!-- ************************************************************************************ -->   
+   <osgi:reference 
+      id="compuwareSecurityConfiguration" 
+      interface="com.compuware.frameworks.security.api.configuration.ICompuwareSecurityConfiguration"/>
+
+
+
+   <!-- ************************************************************************************ -->
+   <!-- Local bean definitions for this layer ("persistence")                                -->
+   <!-- ************************************************************************************ -->
+   <bean 
+      id="propertyConfigurer" 
+      class="com.compuware.frameworks.security.CompuwareSecurityPropertyPlaceholderConfigurer" 
+      scope="singleton">
+      <constructor-arg ref="compuwareSecurityConfiguration"/>   
+   </bean>
+      
+      
+   <!-- JDBC bean definitions -->
+   <bean id="jdbcDataSource" class="com.compuware.frameworks.persistence.core.hibernate.ComboPooledDataSourceFactoryBean" destroy-method="close">
+      <property name="driverClass" value="${jdbc.driverClassName}" />
+      <property name="jdbcUrl" value="${jdbc.connectionString}" />
+      <property name="username" value="${jdbc.username}" />
+      <property name="password" value="${jdbc.password}" />
+      <property name="loginTimeout" value="${jdbc.timeout}" />
+      <property name="properties">
+         <props>
+            <prop key="user">${jdbc.username}</prop>
+            <prop key="password">${jdbc.password}</prop>
+            <prop key="acquireIncrement">${jdbc.c3p0.acquireIncrement}</prop>
+            <prop key="minPoolSize">${jdbc.c3p0.minPoolSize}</prop>
+            <prop key="initialPoolSize">${jdbc.c3p0.initialPoolSize}</prop>
+            <prop key="maxPoolSize">${jdbc.c3p0.maxPoolSize}</prop>
+            <prop key="maxConnectionAge">${jdbc.c3p0.maxConnectionAge}</prop>
+            <prop key="maxIdleTime">${jdbc.c3p0.maxIdleTime}</prop>
+            <prop key="maxIdleTimeExcessConnections">${jdbc.c3p0.maxIdleTimeExcessConnections}</prop>
+            <prop key="idleConnectionTestPeriod">${jdbc.c3p0.idleConnectionTestPeriod}</prop>
+            <prop key="testConnectionOnCheckin">${jdbc.c3p0.testConnectionOnCheckin}</prop>
+            <prop key="testConnectionOnCheckout">${jdbc.c3p0.testConnectionOnCheckout}</prop>
+            <prop key="maxStatementsPerConnection">${jdbc.c3p0.maxStatementsPerConnection}</prop>
+            <prop key="acquireRetryAttempts">${jdbc.c3p0.acquireRetryAttempts}</prop>
+            <prop key="acquireRetryDelay">${jdbc.c3p0.acquireRetryDelay}</prop>
+            <prop key="breakAfterAcquireFailure">${jdbc.c3p0.breakAfterAcquireFailure}</prop>
+         </props>
+      </property>
+   </bean>
+   
+   <bean id="jdbcTemplate" class="org.springframework.jdbc.core.JdbcTemplate" scope="singleton">  
+      <constructor-arg index="0" ref="jdbcDataSource" />
+   </bean>      
+
+   <bean id="securityDataSourceWrapper" class="com.compuware.frameworks.security.persistence.dao.jdbc.SecurityDataSourceWrapper" scope="singleton">  
+      <constructor-arg index="0" ref="jdbcDataSource" />
+   </bean>      
+   
+   <bean
+     id="aclSql"
+     class="${jdbc.sqlDialect}"
+     scope="singleton" />
+     
+     
+   <!--  EhCache bean definitions -->
+   <bean id="cacheFactory" abstract="true" class="org.springframework.cache.ehcache.EhCacheFactoryBean">
+      <property name="cacheManager" ref="cacheManager" />
+   </bean>
+   
+   <bean id="cacheManager" class="org.springframework.cache.ehcache.EhCacheManagerFactoryBean">
+      <property name="configLocation" value="${ehcache.configLocation}" />
+   </bean>
+   
+   <bean id="cacheProviderCacheManagerInjector" class="org.springframework.beans.factory.config.MethodInvokingFactoryBean">
+      <property name="staticMethod" value="com.compuware.frameworks.security.persistence.CustomEhCacheProvider.setCacheManager"/>
+      <property name="arguments">
+         <list>
+            <ref bean="cacheManager"/>
+         </list>
+      </property>
+   </bean>
+   
+   
+   <!-- Hibernate bean definitions -->
+   <bean id="hibernateSessionFactory" class="org.springframework.orm.hibernate3.LocalSessionFactoryBean" depends-on="cacheProviderCacheManagerInjector">
+      <property name="dataSource">
+         <ref local="jdbcDataSource"/>
+      </property>
+      <property name="mappingResources">
+         <list>
+            <value>com/compuware/frameworks/security/persistence/AuditEvent.hbm.xml</value>
+            <value>com/compuware/frameworks/security/persistence/MigrationRecord.hbm.xml</value>
+            <value>com/compuware/frameworks/security/persistence/MultiTenancyRealm.hbm.xml</value>
+            <value>com/compuware/frameworks/security/persistence/Password.hbm.xml</value>
+            <value>com/compuware/frameworks/security/persistence/PasswordPolicy.hbm.xml</value>
+            <value>com/compuware/frameworks/security/persistence/SecurityPrincipal.hbm.xml</value>
+            <value>com/compuware/frameworks/security/persistence/SecurityRole.hbm.xml</value>
+         </list>
+      </property>
+      <property name="hibernateProperties">
+         <props>
+            <prop key="hibernate.dialect">${hibernate.dialect}</prop>
+            <prop key="hibernate.generate_statistics">${hibernate.generate_statistics}</prop>
+            <prop key="hibernate.show_sql">${hibernate.show_sql}</prop>
+            <prop key="hibernate.format_sql">${hibernate.format_sql}</prop>
+            <prop key="hibernate.use_sql_comments">${hibernate.use_sql_comments}</prop>
+            <prop key="hibernate.cache.use_query_cache">${hibernate.cache.use_query_cache}</prop>
+            <prop key="hibernate.cache.use_second_level_cache">${hibernate.cache.use_second_level_cache}</prop>
+            <prop key="hibernate.max_fetch_depth">${hibernate.max_fetch_depth}</prop>
+            <prop key="hibernate.default_batch_fetch_size">${hibernate.default_batch_fetch_size}</prop>
+            <prop key="hibernate.jdbc.fetch_size">${hibernate.jdbc.fetch_size}</prop>
+            <prop key="hibernate.jdbc.batch_size">${hibernate.jdbc.batch_size}</prop>
+            <prop key="hibernate.jdbc.batch_versioned_data">${hibernate.jdbc.batch_versioned_data}</prop>
+            <prop key="hibernate.default_entity_mode">pojo</prop>            
+            <prop key="hibernate.hbm2ddl.auto">update</prop>
+            <prop key="hibernate.cache.provider_class">com.compuware.frameworks.security.persistence.CustomEhCacheProvider</prop>
+            <prop key="hibernate.bytecode.use_reflection_optimizer">false</prop>
+            <prop key="hibernate.query.factory_class">org.hibernate.hql.classic.ClassicQueryTranslatorFactory</prop>
+         </props>
+      </property>
+   </bean>
+
+   <bean id="hibernateInterceptor" class="org.springframework.orm.hibernate3.HibernateInterceptor">
+      <property name="sessionFactory" ref="hibernateSessionFactory" />
+   </bean>
+
+   <bean id="hibernateTransactionManager" class="org.springframework.orm.hibernate3.HibernateTransactionManager">
+      <property name="sessionFactory">
+         <ref local="hibernateSessionFactory"/>
+      </property>
+   </bean>
+
+   <bean id="persistenceExceptionTranslationPostProcessor" class="org.springframework.dao.annotation.PersistenceExceptionTranslationPostProcessor"/>   
+
+   <!--  Data Access Object(DAO) bean definitions  -->
+   <bean id="auditEventDao" class="com.compuware.frameworks.security.persistence.dao.hibernate.AuditEventHibernateDao">
+      <constructor-arg ref="hibernateSessionFactory"/>
+   </bean>
+
+   <bean id="migrationRecordDao" class="com.compuware.frameworks.security.persistence.dao.hibernate.MigrationRecordHibernateDao">
+      <constructor-arg ref="hibernateSessionFactory"/>
+   </bean>
+
+   <bean id="multiTenancyRealmDao" class="com.compuware.frameworks.security.persistence.dao.hibernate.MultiTenancyRealmHibernateDao">
+      <constructor-arg ref="hibernateSessionFactory"/>
+   </bean>   
+      	
+   <bean id="securityPrincipalDao" class="com.compuware.frameworks.security.persistence.dao.hibernate.SecurityPrincipalHibernateDao">
+      <constructor-arg ref="hibernateSessionFactory"/>
+   </bean>
+   
+   <bean id="securityRoleDao" class="com.compuware.frameworks.security.persistence.dao.hibernate.SecurityRoleHibernateDao">
+      <constructor-arg ref="hibernateSessionFactory"/>
+   </bean>
+
+
+
+   <!-- ************************************************************************************ -->
+   <!-- OSGi exports that are consumed by the "service business logic" layer                 -->
+   <!-- ************************************************************************************ -->
+   <osgi:service 
+      id="securityDataSourceWrapperBean"
+      ref="securityDataSourceWrapper" 
+      interface="com.compuware.frameworks.security.persistence.dao.jdbc.ISecurityDataSourceWrapper"/>
+   
+   <osgi:service
+      id="aclSqlBean" 
+      ref="aclSql" 
+      interface="com.compuware.frameworks.security.persistence.dao.IAclSql"/>
+   
+   <osgi:service
+      id="hibernateTransactionManagerBean"
+      ref="hibernateTransactionManager" 
+      interface="org.springframework.transaction.support.ResourceTransactionManager"/>
+    
+   <osgi:service 
+      id="hibernateInterceptorBean" 
+      ref="hibernateInterceptor"
+      interface="org.aopalliance.intercept.MethodInterceptor"/>
+
+   <osgi:service 
+      id="auditEventDaoBean" 
+      ref="auditEventDao"
+      interface="com.compuware.frameworks.security.persistence.dao.IAuditEventDao"/>
+
+   <osgi:service 
+      id="migrationRecordDaoBean" 
+      ref="migrationRecordDao"
+      interface="com.compuware.frameworks.security.persistence.dao.IMigrationRecordDao"/>
+
+   <osgi:service 
+      id="multiTenancyRealmDaoBean" 
+      ref="multiTenancyRealmDao"
+      interface="com.compuware.frameworks.security.persistence.dao.IMultiTenancyRealmDao"/>
+
+   <osgi:service 
+      id="securityPrincipalDaoBean" 
+      ref="securityPrincipalDao"
+      interface="com.compuware.frameworks.security.persistence.dao.ISecurityPrincipalDao"/>
+
+   <osgi:service 
+      id="securityRoleDaoBean"
+      ref="securityRoleDao" 
+      interface="com.compuware.frameworks.security.persistence.dao.ISecurityRoleDao"/>
+
+</beans>	

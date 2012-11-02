@@ -1,0 +1,720 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns="http://www.springframework.org/schema/beans"  
+    xmlns:security="http://www.springframework.org/schema/security"  
+    xmlns:p="http://www.springframework.org/schema/p"      
+    xmlns:osgi="http://www.springframework.org/schema/osgi"
+    xmlns:aop="http://www.springframework.org/schema/aop"
+    xmlns:tx="http://www.springframework.org/schema/tx"    
+    xsi:schemaLocation="http://www.springframework.org/schema/beans 
+        http://www.springframework.org/schema/beans/spring-beans-3.0.xsd
+        http://www.springframework.org/schema/security 
+        http://www.springframework.org/schema/security/spring-security-3.0.xsd
+        http://www.springframework.org/schema/osgi
+        http://www.springframework.org/schema/osgi/spring-osgi.xsd
+        http://www.springframework.org/schema/tx
+        http://www.springframework.org/schema/tx/spring-tx-3.0.xsd
+        http://www.springframework.org/schema/aop 
+        http://www.springframework.org/schema/aop/spring-aop-3.0.xsd
+        ">
+
+   <!-- ************************************************************************************ -->
+   <!-- Bootstrap bean class.  This is used for clients that want to access services via the -->
+   <!-- singleton instance here, that is accessible outside of Spring via the:               -->
+   <!--                                                                                      -->
+   <!--    ServiceProvider.getInstance()                                                     -->
+   <!--                                                                                      -->
+   <!-- call. It is preferred, however, that clients use the Spring/OSGi approach            -->
+   <!-- (i.e. import the Spring beans as OSGi "services" that are exported here:             -->
+   <!--    OSGi Service ID                     Interface                                     -->
+   <!--    ================================================================================= -->
+   <!--    aclManagerServiceProxy              com.compuware.frameworks.security.service.api.authorization.IAclManagerService      -->   
+   <!--    auditServiceProxy                   com.compuware.frameworks.security.service.api.audit.IAuditService                   -->
+   <!--    authenticationServiceProxy          com.compuware.frameworks.security.service.api.authentication.IAuthenticationService -->   
+   <!--    configurationServiceProxy           com.compuware.frameworks.security.service.api.configuration.IConfigurationService   -->
+   <!--    eventServiceProxy                   com.compuware.frameworks.security.service.api.event.IEventService                   -->
+   <!--    ldapSearchServiceProxy              com.compuware.frameworks.security.service.api.management.ldap.ILdapSearchService    -->
+   <!--    managementServiceProxy              com.compuware.frameworks.security.service.api.management.IManagementService         -->  
+   <!--    migrationServiceProxy               com.compuware.frameworks.security.service.api.migration.IMigrationService           -->
+   <!--    sessionServiceProxy                 com.compuware.frameworks.security.service.api.session.ISessionService               -->
+   <!-- ************************************************************************************ -->
+   <bean 
+      id="serviceProvider" 
+      class="com.compuware.frameworks.security.service.server.ServiceProvider" 
+      scope="singleton">
+   </bean>	
+
+
+
+   <!-- ************************************************************************************ -->
+   <!-- OSGi imports from the "core" layer                                                   -->
+   <!-- ************************************************************************************ -->
+   <osgi:reference 
+      id="compuwareSecurityConfiguration" 
+      interface="com.compuware.frameworks.security.api.configuration.ICompuwareSecurityConfiguration "/>
+
+
+
+   <!-- ************************************************************************************ -->
+   <!-- OSGi imports from the "persistence" layer                                            -->
+   <!-- ************************************************************************************ -->
+   <osgi:reference 
+      id="securityDataSourceWrapper" 
+      interface="com.compuware.frameworks.security.persistence.dao.jdbc.ISecurityDataSourceWrapper" />
+
+   <osgi:reference 
+      id="aclSql" 
+      interface="com.compuware.frameworks.security.persistence.dao.IAclSql" />
+      
+   <osgi:reference 
+      id="hibernateTransactionManager" 
+      interface="org.springframework.transaction.support.ResourceTransactionManager" />   
+
+   <osgi:reference 
+      id="auditEventDao" 
+      interface="com.compuware.frameworks.security.persistence.dao.IAuditEventDao" />
+
+   <osgi:reference 
+      id="migrationRecordDao" 
+      interface="com.compuware.frameworks.security.persistence.dao.IMigrationRecordDao" />
+
+   <osgi:reference 
+      id="multiTenancyRealmDao" 
+      interface="com.compuware.frameworks.security.persistence.dao.IMultiTenancyRealmDao" />
+
+   <osgi:reference 
+      id="securityPrincipalDao" 
+      interface="com.compuware.frameworks.security.persistence.dao.ISecurityPrincipalDao" />
+
+   <osgi:reference 
+      id="securityRoleDao" 
+      interface="com.compuware.frameworks.security.persistence.dao.ISecurityRoleDao" />
+
+
+
+   <!-- ************************************************************************************ -->
+   <!-- Local bean definitions for this layer ("service layer")                              -->
+   <!-- ************************************************************************************ -->
+   <bean
+      id="compuwareSecurityLoggingInterceptor"
+      class="com.compuware.frameworks.security.service.server.interceptor.CompuwareSecurityLoggingInterceptor"
+      scope="singleton">
+   </bean>
+
+   <bean
+      id="compuwareSecurityShadowSecurityUserInterceptor"
+      class="com.compuware.frameworks.security.service.server.interceptor.CompuwareSecurityShadowSecurityUserInterceptor"
+      scope="singleton">
+   </bean>
+   
+   <bean id="transactionInterceptor" class="org.springframework.transaction.interceptor.TransactionInterceptor">    
+      <property name="transactionManager" ref="hibernateTransactionManager" />
+      <property name="transactionAttributes">
+         <props>
+            <prop key="auth*">PROPAGATION_REQUIRED</prop>         
+            <prop key="add*">PROPAGATION_REQUIRED</prop>
+            <prop key="create*">PROPAGATION_REQUIRED</prop>
+            <prop key="update*">PROPAGATION_REQUIRED</prop>
+            <prop key="save*">PROPAGATION_REQUIRED</prop>
+            <prop key="delete*">PROPAGATION_REQUIRED</prop>
+            <prop key="remove*">PROPAGATION_REQUIRED</prop>
+            <prop key="store*">PROPAGATION_REQUIRED</prop>
+            <prop key="set*">PROPAGATION_REQUIRED</prop>
+            <prop key="populateDatabase*">PROPAGATION_REQUIRED</prop>
+            <prop key="get*">PROPAGATION_REQUIRED,readOnly</prop>
+            <prop key="load*">PROPAGATION_REQUIRED,readOnly</prop>
+            <prop key="*">PROPAGATION_REQUIRED</prop>
+         </props>
+      </property>
+   </bean>
+
+   <bean id="compuwareSecurityMethodSecurityInterceptor" class="org.springframework.security.access.intercept.aopalliance.MethodSecurityInterceptor" autowire="byType">
+      <property name="authenticationManager" ref="authenticationService"/>   
+      <property name="accessDecisionManager" ref="compuwareSecurityAccessDecisionManager"/>
+      <property name="afterInvocationManager" ref="afterInvocationManager"/>
+      <property name="securityMetadataSource">
+         <bean id="objectDefinitionSource" class="org.springframework.security.access.annotation.SecuredAnnotationSecurityMetadataSource" />
+      </property>
+   </bean>
+
+
+   <!-- ACL MANAGER SERVICE -->
+   <bean 
+      id="propertyConfigurer" 
+      class="com.compuware.frameworks.security.CompuwareSecurityPropertyPlaceholderConfigurer" 
+      scope="singleton">
+      <constructor-arg ref="compuwareSecurityConfiguration"/>   
+   </bean>
+   
+   <bean id="aclCache" class="org.springframework.security.acls.domain.EhCacheBasedAclCache">
+      <constructor-arg>
+         <bean class="org.springframework.cache.ehcache.EhCacheFactoryBean">
+            <property name="cacheManager">
+               <bean class="org.springframework.cache.ehcache.EhCacheManagerFactoryBean"/>
+            </property>
+            <property name="cacheName" value="aclCache"/>
+         </bean>
+      </constructor-arg>
+   </bean>
+   
+   <bean id="aclAuthorizationStrategy" class="org.springframework.security.acls.domain.AclAuthorizationStrategyImpl">
+      <constructor-arg>
+         <list>
+            <bean class="org.springframework.security.core.authority.GrantedAuthorityImpl">
+               <constructor-arg value="ROLE_JFW_SEC_MANAGEMENT"/>
+            </bean>
+            <bean class="org.springframework.security.core.authority.GrantedAuthorityImpl">
+               <constructor-arg value="ROLE_JFW_SEC_MANAGEMENT"/>
+            </bean>
+            <bean class="org.springframework.security.core.authority.GrantedAuthorityImpl">
+               <constructor-arg value="ROLE_JFW_SEC_MANAGEMENT"/>
+            </bean>
+         </list>
+      </constructor-arg>
+   </bean>
+
+   <bean id="aclAuditLogger" class="org.springframework.security.acls.domain.ConsoleAuditLogger" />
+      
+   <bean id="aclLookupStrategy" class="com.compuware.frameworks.security.service.server.authorization.acl.CompuwareSecurityAclLookupStrategy">
+      <constructor-arg index="0" ref="securityDataSourceWrapper"/>
+      <constructor-arg index="1" ref="aclCache"/>
+      <constructor-arg index="2" ref="aclAuthorizationStrategy"/>
+      <constructor-arg index="3" ref="aclAuditLogger"/>
+   </bean>
+      
+   <bean
+      id="compuwareSecurityJdbcMutableAclService"
+      class="com.compuware.frameworks.security.service.server.authorization.jdbc.CompuwareSecurityJdbcMutableAclService"
+      scope="singleton">
+      <constructor-arg index="0" ref="securityDataSourceWrapper"/>
+      <constructor-arg index="1" ref="aclSql"/>
+      <constructor-arg index="2" ref="aclLookupStrategy"/>
+      <constructor-arg index="3" ref="aclCache"/>
+   </bean>
+   
+   <bean id="afterInvocationManager" class="org.springframework.security.access.intercept.AfterInvocationProviderManager">
+      <property name="providers">
+         <list>
+            <ref local="afterAclRead"/>
+            <ref local="afterAclCollectionRead"/>
+         </list>
+      </property>
+   </bean>
+   
+   <bean 
+      id="aclManagerService" 
+      class="com.compuware.frameworks.security.service.server.authorization.AclManagerServiceImpl" 
+      scope="singleton">
+      <constructor-arg index="0" ref="compuwareSecurityJdbcMutableAclService" />
+   </bean>  
+   
+   <bean id="aclManagerServiceProxy" 
+      class="org.springframework.aop.framework.ProxyFactoryBean">
+      <property 
+         name="proxyInterfaces" 
+         value="com.compuware.frameworks.security.service.api.authorization.IAclManagerService"/>
+      <property name="interceptorNames">
+         <list>
+            <idref bean="compuwareSecurityLoggingInterceptor"/>         
+            <idref bean="compuwareSecurityMethodSecurityInterceptor"/>
+            <idref bean="transactionInterceptor"/>
+            <idref local="aclManagerService"/>
+         </list>
+      </property>
+   </bean>      
+
+   
+   <!-- AUDIT SERVICE -->
+   <bean 
+      id="auditService" 
+      class="com.compuware.frameworks.security.service.server.audit.AuditServiceImpl" 
+      scope="singleton">
+      <constructor-arg index="0" ref="auditEventDao" />
+   </bean>  
+   
+   <bean id="auditServiceProxy" 
+      class="org.springframework.aop.framework.ProxyFactoryBean">
+      <property 
+         name="proxyInterfaces" 
+         value="com.compuware.frameworks.security.service.api.audit.IAuditService"/>
+      <property name="interceptorNames">
+         <list>
+            <idref bean="compuwareSecurityMethodSecurityInterceptor"/>
+            <idref bean="transactionInterceptor"/>
+            <idref local="auditService"/>
+         </list>
+      </property>
+   </bean>      
+
+         
+   <!-- AUTHENTICATION SERVICE -->
+   <bean 
+      id="ldapContextSource" 
+      class="com.compuware.frameworks.security.service.server.management.ldap.CompuwareSecurityLdapContextSource"
+      scope="singleton">  
+      <constructor-arg index="0" value="${ldap.url}"/>
+      <constructor-arg index="1" value="${ldap.username}"/>  
+      <constructor-arg index="2" value="${ldap.password}"/>
+      <constructor-arg index="3" value="${ldap.referral}"/>
+      <constructor-arg index="4" value="${ldap.useTLS}"/>
+      <constructor-arg index="5" value="${ldap.performServerCertificateValidation}"/>
+      <constructor-arg index="6">
+         <map>
+            <entry><key><value>ldapUrl</value></key><value>${ldap.url}</value></entry>
+            <entry><key><value>ldapServiceAccountUserDN</value></key><value>${ldap.username}</value></entry>
+            <entry><key><value>ldapServiceAccountPassword</value></key><value>${ldap.password}</value></entry>
+            <entry><key><value>ldapReferral</value></key><value>${ldap.referral}</value></entry>
+            <entry><key><value>java.naming.ldap.referral.limit</value></key><value>${ldap.referralLimit}</value></entry>
+            <entry><key><value>com.sun.jndi.ldap.read.timeout</value></key><value>${ldap.timeout}</value></entry>
+            <entry><key><value>com.sun.jndi.ldap.connect.timeout</value></key><value>${ldap.timeout}</value></entry>
+            <entry><key><value>java.naming.security.protocol</value></key><value>${ldap.encryptionMethod}</value></entry>
+            <entry><key><value>java.naming.ldap.factory.socket</value></key><value>com.compuware.frameworks.security.service.server.management.ldap.CompuwareSecuritySslSocketFactory</value></entry>         
+            <entry><key><value>java.naming.ldap.version</value></key><value>3</value></entry>
+         </map>
+      </constructor-arg>
+   </bean>  
+
+   <bean 
+      id="ldapAuthenticator"
+      class="com.compuware.frameworks.security.service.server.authentication.ldap.LdapAuthenticator" 
+      scope="singleton">
+      <constructor-arg index="0" ref="ldapContextSource" />
+      <constructor-arg index="1" ref="ldapSearchService" />
+      <constructor-arg index="2" ref="managementService" />
+   </bean>  
+      
+   <bean 
+      id="authenticationService" 
+      class="com.compuware.frameworks.security.service.server.authentication.AuthenticationServiceImpl" 
+      scope="singleton">
+      <constructor-arg index="0" ref="auditService" />
+      <constructor-arg index="1" ref="configurationService" />
+      <constructor-arg index="2" ref="eventService" />
+      <constructor-arg index="3" ref="managementService" />
+      <constructor-arg index="4" ref="multiTenancyRealmDao" />
+      <constructor-arg index="5" ref="ldapAuthenticator" />
+      <constructor-arg index="6" ref="ldapSearchService" />
+   </bean>  
+   
+   <bean id="authenticationServiceProxy" 
+      class="org.springframework.aop.framework.ProxyFactoryBean">
+      <property 
+         name="proxyInterfaces" 
+         value="com.compuware.frameworks.security.service.api.authentication.IAuthenticationService"/>
+      <property name="interceptorNames">
+         <list>
+            <idref bean="transactionInterceptor"/>
+            <idref local="authenticationService"/>
+         </list>
+      </property>
+   </bean>
+
+
+   <!-- AUTHORIZATION - Method Level Security -->
+   <bean 
+      id="compuwareSecurityRoleHierarchyImpl" 
+      class="com.compuware.frameworks.security.service.server.authorization.jdbc.CompuwareSecurityRoleHierarchyImpl"
+      scope="singleton">
+      <constructor-arg index="0" ref="securityDataSourceWrapper" />
+   </bean>
+ 
+   <bean 
+      id="roleHierarchyVoter" 
+      class="com.compuware.frameworks.security.service.server.authorization.CompuwareSecurityRoleHierarchyVoter"
+      scope="singleton">
+      <constructor-arg ref="compuwareSecurityRoleHierarchyImpl" />
+      <property name="rolePrefix" value="ROLE_" />      
+   </bean>
+
+
+   <!-- AUTHORIZATION - Web -->
+   <bean id="authenticatedVoter" class="org.springframework.security.access.vote.AuthenticatedVoter" />
+         
+
+   <!-- AUTHORIZATION - Access Control Lists (ACLs) -->   
+   <bean id="readPermission" class="org.springframework.beans.factory.config.FieldRetrievingFactoryBean">
+      <property name="staticField" value="org.springframework.security.acls.domain.BasePermission.READ"/>
+   </bean>
+
+   <bean id="writePermission" class="org.springframework.beans.factory.config.FieldRetrievingFactoryBean">
+      <property name="staticField" value="org.springframework.security.acls.domain.BasePermission.WRITE"/>
+   </bean>
+
+   <bean id="deletePermission" class="org.springframework.beans.factory.config.FieldRetrievingFactoryBean">
+      <property name="staticField" value="org.springframework.security.acls.domain.BasePermission.DELETE"/>
+   </bean>
+           
+   <bean id="administrationPermission" class="org.springframework.beans.factory.config.FieldRetrievingFactoryBean">
+      <property name="staticField" value="org.springframework.security.acls.domain.BasePermission.ADMINISTRATION"/>
+   </bean>
+   
+   <bean id="aclObjectReadVoter" class="com.compuware.frameworks.security.service.server.authorization.acl.CompuwareSecurityAclEntryVoter">
+      <constructor-arg ref="compuwareSecurityJdbcMutableAclService"/>
+      <constructor-arg value="ACL_OBJECT_READ"/>
+      <constructor-arg>
+         <list>
+            <ref local="administrationPermission"/>
+            <ref local="readPermission"/>
+         </list>
+      </constructor-arg>
+      <constructor-arg ref="managementServiceProxy"/>
+      <property name="processDomainObjectClass" value="com.compuware.frameworks.security.service.api.authorization.IAclDomainObject"/>
+    </bean>
+
+   <bean id="aclObjectWriteVoter" class="com.compuware.frameworks.security.service.server.authorization.acl.CompuwareSecurityAclEntryVoter">
+      <constructor-arg ref="compuwareSecurityJdbcMutableAclService"/>
+      <constructor-arg value="ACL_OBJECT_WRITE"/>
+      <constructor-arg>
+         <list>
+            <ref local="administrationPermission"/>
+            <ref local="writePermission"/>
+         </list>
+      </constructor-arg>
+      <constructor-arg ref="managementServiceProxy"/>
+      <property name="processDomainObjectClass" value="com.compuware.frameworks.security.service.api.authorization.IAclDomainObject"/>
+   </bean>
+
+   <bean id="aclObjectDeleteVoter" class="com.compuware.frameworks.security.service.server.authorization.acl.CompuwareSecurityAclEntryVoter">
+      <constructor-arg ref="compuwareSecurityJdbcMutableAclService"/>
+      <constructor-arg value="ACL_OBJECT_DELETE"/>
+      <constructor-arg>
+         <list>
+            <ref local="administrationPermission"/>
+            <ref local="deletePermission"/>
+         </list>
+      </constructor-arg>
+      <constructor-arg ref="managementServiceProxy"/>
+      <property name="processDomainObjectClass" value="com.compuware.frameworks.security.service.api.authorization.IAclDomainObject"/>
+   </bean>
+
+   <bean id="aclObjectAdminVoter" class="com.compuware.frameworks.security.service.server.authorization.acl.CompuwareSecurityAclEntryVoter">
+      <constructor-arg ref="compuwareSecurityJdbcMutableAclService"/>
+      <constructor-arg value="ACL_OBJECT_ADMIN"/>
+      <constructor-arg>
+         <list>
+            <ref local="administrationPermission"/>
+         </list>
+      </constructor-arg>
+      <constructor-arg ref="managementServiceProxy"/>
+      <property name="processDomainObjectClass" value="com.compuware.frameworks.security.service.api.authorization.IAclDomainObject"/>
+   </bean>
+                          
+   <bean id="afterAclRead" class="com.compuware.frameworks.security.service.server.authorization.acl.CompuwareSecurityAclEntryAfterInvocationProvider">
+      <constructor-arg ref="compuwareSecurityJdbcMutableAclService"/>
+      <constructor-arg>
+         <list>
+            <ref local="administrationPermission"/>
+            <ref local="readPermission"/>
+         </list>
+      </constructor-arg>
+      <constructor-arg ref="managementService"/>
+   </bean>
+           
+   <bean id="afterAclCollectionRead" class="com.compuware.frameworks.security.service.server.authorization.acl.CompuwareSecurityAclEntryAfterInvocationCollectionFilteringProvider">
+      <constructor-arg ref="compuwareSecurityJdbcMutableAclService"/>
+      <constructor-arg>
+         <list>
+            <ref local="administrationPermission"/>
+            <ref local="readPermission"/>
+         </list>
+      </constructor-arg>
+      <constructor-arg ref="managementService"/>
+   </bean>
+
+
+   <!-- AUTHORIZATION - Method/Domain Object Level -->    
+   <bean id="compuwareSecurityAccessDecisionManager" class="org.springframework.security.access.vote.UnanimousBased">
+      <property name="allowIfAllAbstainDecisions" value="false"/>
+      <property name="decisionVoters">
+         <list>
+            <ref local="roleHierarchyVoter"/>
+            <ref local="aclObjectReadVoter"/>
+            <ref local="aclObjectWriteVoter"/>
+            <ref local="aclObjectDeleteVoter"/>
+            <ref local="aclObjectAdminVoter"/>
+         </list>
+      </property>
+   </bean>
+
+
+   <!-- AUTHORIZATION - Web -->    
+   <bean id="compuwareSecurityWebAccessDecisionManager" class="org.springframework.security.access.vote.UnanimousBased">
+      <property name="allowIfAllAbstainDecisions" value="false"/>
+      <property name="decisionVoters">
+         <list>
+            <ref local="authenticatedVoter"/>         
+            <ref local="roleHierarchyVoter"/>
+         </list>
+      </property>
+   </bean>
+
+
+   <!-- CONFIGURATION SERVICE -->
+   <bean 
+      id="configurationService" 
+      class="com.compuware.frameworks.security.service.server.configuration.ConfigurationServiceImpl" 
+      scope="singleton">
+      <constructor-arg index="0" ref="compuwareSecurityConfiguration" />
+      <constructor-arg index="1" ref="eventServiceProxy" />
+      <constructor-arg index="2" ref="auditServiceProxy" />
+      <constructor-arg index="3" ref="multiTenancyRealmDao" />      
+   </bean>  
+   
+   <bean id="configurationServiceProxy" 
+      class="org.springframework.aop.framework.ProxyFactoryBean">
+      <property 
+         name="proxyInterfaces" 
+         value="com.compuware.frameworks.security.service.api.configuration.IConfigurationService"/>
+      <property name="interceptorNames">
+         <list>
+            <idref bean="compuwareSecurityLoggingInterceptor"/>         
+            <idref bean="compuwareSecurityMethodSecurityInterceptor"/>
+            <idref bean="transactionInterceptor"/>            
+            <idref local="configurationService"/>
+         </list>
+      </property>
+   </bean>
+
+
+   <!-- EVENT SERVICE -->
+   <bean 
+      id="eventService" 
+      class="com.compuware.frameworks.security.service.server.event.EventServiceImpl" 
+      scope="singleton">
+   </bean>  
+   
+   <bean id="eventServiceProxy" 
+      class="org.springframework.aop.framework.ProxyFactoryBean">
+      <property 
+         name="proxyInterfaces" 
+         value="com.compuware.frameworks.security.service.api.event.IEventService"/>
+      <property name="interceptorNames">
+         <list>
+            <idref bean="compuwareSecurityLoggingInterceptor"/>         
+            <idref bean="compuwareSecurityMethodSecurityInterceptor"/>
+            <idref bean="transactionInterceptor"/>
+            <idref local="eventService"/>
+         </list>
+      </property>
+   </bean>
+
+   
+   <!-- LDAP SEARCH SERVICE -->
+   <bean 
+      id="ldapSearchService" 
+      class="com.compuware.frameworks.security.service.server.management.ldap.LdapSearchServiceImpl" 
+      scope="singleton">
+      <constructor-arg index="0" ref="eventServiceProxy" />      
+      <constructor-arg index="1" ref="auditServiceProxy" />
+      <constructor-arg index="2" ref="configurationServiceProxy" />
+      <constructor-arg index="3" ref="multiTenancyRealmDao" />
+   </bean>  
+   
+   <bean id="ldapSearchServiceProxy" 
+      class="org.springframework.aop.framework.ProxyFactoryBean">
+      <property 
+         name="proxyInterfaces"
+         value="com.compuware.frameworks.security.service.api.management.ldap.ILdapSearchService"/>
+      <property name="interceptorNames">
+         <list>
+            <idref bean="compuwareSecurityLoggingInterceptor"/>         
+            <idref bean="compuwareSecurityMethodSecurityInterceptor"/>
+            <idref bean="transactionInterceptor"/>
+            <idref local="ldapSearchService"/>
+         </list>
+      </property>
+   </bean>
+
+   
+   <!-- MANAGEMENT SERVICE -->
+   <bean 
+      id="managementService" 
+      class="com.compuware.frameworks.security.service.server.management.ManagementServiceImpl" 
+      scope="singleton">
+      <constructor-arg index="0" ref="eventServiceProxy" />      
+      <constructor-arg index="1" ref="auditServiceProxy" />
+      <constructor-arg index="2" ref="multiTenancyRealmDao" />
+      <constructor-arg index="3" ref="securityPrincipalDao" />
+      <constructor-arg index="4" ref="securityRoleDao" />
+   </bean>  
+   
+   <bean id="managementServiceProxy" 
+      class="org.springframework.aop.framework.ProxyFactoryBean">
+      <property 
+         name="proxyInterfaces" 
+         value="com.compuware.frameworks.security.service.api.management.IManagementService"/>
+      <property name="interceptorNames">
+         <list>
+            <idref bean="compuwareSecurityShadowSecurityUserInterceptor"/>
+            <idref bean="compuwareSecurityLoggingInterceptor"/>         
+            <idref bean="compuwareSecurityMethodSecurityInterceptor"/>
+            <idref bean="transactionInterceptor"/>
+            <idref local="managementService"/>
+         </list>
+      </property>
+   </bean>
+
+
+   <!-- MIGRATION SERVICE -->
+   <bean 
+      id="migrationService" 
+      class="com.compuware.frameworks.security.service.server.migration.MigrationServiceImpl" 
+      scope="singleton">
+      <constructor-arg index="0" ref="managementServiceProxy" />
+      <constructor-arg index="1" ref="eventServiceProxy" />
+      <constructor-arg index="2" ref="auditServiceProxy" />
+      <constructor-arg index="3" ref="multiTenancyRealmDao" />
+      <constructor-arg index="4" ref="migrationRecordDao" />
+   </bean>  
+   
+   <bean id="migrationServiceProxy" 
+      class="org.springframework.aop.framework.ProxyFactoryBean">
+      <property 
+         name="proxyInterfaces" 
+         value="com.compuware.frameworks.security.service.api.migration.IMigrationService"/>
+      <property name="interceptorNames">
+         <list>
+            <idref bean="compuwareSecurityLoggingInterceptor"/>         
+            <idref bean="compuwareSecurityMethodSecurityInterceptor"/>
+            <idref bean="transactionInterceptor"/>            
+            <idref local="migrationService"/>
+         </list>
+      </property>
+   </bean>
+   
+
+   <!-- SESSION SERVICE -->
+   <bean 
+      id="sessionService" 
+      class="com.compuware.frameworks.security.service.server.session.SessionServiceImpl" 
+      scope="singleton">
+      <constructor-arg index="0" ref="eventServiceProxy" />
+      <constructor-arg index="1" ref="auditServiceProxy" />
+      <constructor-arg index="2" ref="multiTenancyRealmDao" />
+   </bean>  
+   
+   <bean id="sessionServiceProxy" 
+      class="org.springframework.aop.framework.ProxyFactoryBean">
+      <property 
+         name="proxyInterfaces" 
+         value="com.compuware.frameworks.security.service.api.session.ISessionService"/>
+      <property name="interceptorNames">
+         <list>
+            <idref bean="compuwareSecurityLoggingInterceptor"/>         
+            <idref bean="compuwareSecurityMethodSecurityInterceptor"/>
+            <idref bean="transactionInterceptor"/>
+            <idref local="sessionService"/>
+         </list>
+      </property>
+   </bean>
+   
+   
+   <!-- HOUSEKEEPING -->
+   <bean 
+      id="housekeepingSchedulerFactoryBean"
+      class="org.springframework.scheduling.quartz.SchedulerFactoryBean"
+      scope="singleton">
+      <property name="triggers">
+         <list>
+            <ref bean="housekeepingCronTrigger" />
+         </list>
+      </property>
+   </bean>
+   
+   <bean 
+      id="housekeepingCronTrigger" 
+      class="org.springframework.scheduling.quartz.CronTriggerBean"
+      scope="singleton">
+      <property name="jobDetail" ref="housekeepingJob" />
+      <!-- Run every morning at 6:00 AM -->
+      <property name="cronExpression" value="0 0 5 * * ?" />
+   </bean>
+    
+   <bean
+      id="housekeepingJob" 
+      name="housekeepingJob" 
+      class="org.springframework.scheduling.quartz.JobDetailBean"
+      scope="singleton">
+      <property name="jobClass" value="com.compuware.frameworks.security.service.server.housekeeping.HousekeepingJob" />
+      <property name="jobDataAsMap">
+         <map>
+         </map>
+      </property>
+   </bean>	
+
+
+
+   <!-- ************************************************************************************ -->
+   <!-- OSGi exports that are consumed by the application layer (web app and web services.   -->
+   <!-- ************************************************************************************ -->   
+   <osgi:service 
+      id="auditServiceBean"
+      ref="auditServiceProxy" 
+      interface="com.compuware.frameworks.security.service.api.audit.IAuditService"/>      
+    
+   <osgi:service 
+      id="authenticationServiceBean"
+      ref="authenticationServiceProxy" 
+      interface="com.compuware.frameworks.security.service.api.authentication.IAuthenticationService"/>
+
+   <osgi:service 
+      id="configurationServiceBean"
+      ref="configurationServiceProxy" 
+      interface="com.compuware.frameworks.security.service.api.configuration.IConfigurationService"/>
+
+   <osgi:service 
+      id="eventServiceBean"
+      ref="eventServiceProxy" 
+      interface="com.compuware.frameworks.security.service.api.event.IEventService"/>
+
+   <osgi:service
+      id="ldapSearchServiceBean"
+      ref="ldapSearchServiceProxy"
+      interface="com.compuware.frameworks.security.service.api.management.ldap.ILdapSearchService"/>
+
+   <osgi:service 
+      id="managementServiceBean"
+      ref="managementServiceProxy" 
+      interface="com.compuware.frameworks.security.service.api.management.IManagementService"/>
+
+   <osgi:service 
+      id="migrationServiceBean"
+      ref="migrationServiceProxy" 
+      interface="com.compuware.frameworks.security.service.api.migration.IMigrationService"/>
+                
+   <osgi:service
+      id="sessionServiceBean"
+      ref="sessionServiceProxy"
+      interface="com.compuware.frameworks.security.service.api.session.ISessionService"/>
+   	  
+   	  
+   <osgi:service
+      id="compuwareSecurityLoggingInterceptorBean" 
+      ref="compuwareSecurityLoggingInterceptor" 
+      interface="org.aopalliance.intercept.MethodInterceptor"/>
+   	  
+   <osgi:service
+      id="compuwareSecurityMethodSecurityInterceptorBean" 
+      ref="compuwareSecurityMethodSecurityInterceptor" 
+      interface="org.aopalliance.intercept.MethodInterceptor"/>
+   	  
+   <osgi:service
+      id="compuwareSecurityAccessDecisionManagerBean" 
+      ref="compuwareSecurityAccessDecisionManager" 
+      interface="org.springframework.security.access.AccessDecisionManager">
+      <osgi:service-properties>
+         <entry key="type" value="method" />
+      </osgi:service-properties>
+   </osgi:service>
+   
+   <osgi:service
+      id="compuwareSecurityWebAccessDecisionManagerBean"
+      ref="compuwareSecurityWebAccessDecisionManager" 
+      interface="org.springframework.security.access.AccessDecisionManager">
+      <osgi:service-properties>
+         <entry key="type" value="web" />
+      </osgi:service-properties>
+   </osgi:service>
+   	  
+</beans>        

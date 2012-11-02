@@ -1,0 +1,127 @@
+<?xml version="1.0"?>
+<!DOCTYPE hibernate-mapping PUBLIC
+        "-//Hibernate/Hibernate Mapping DTD 3.0//EN"
+        "http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
+
+<hibernate-mapping package="com.compuware.frameworks.security.service.api.model" default-lazy="false">
+
+    <class name="SecurityPrincipal" table="SECURITY_PRINCIPAL">
+
+        <cache usage="nonstrict-read-write" />
+        
+        <id name="securityPrincipalId" 
+            column="SECURITY_PRINCIPAL_ID" 
+            unsaved-value="null" 
+            type="java.lang.Long"> 
+            <generator class="native" /> 
+        </id>
+        
+        <discriminator column="SUBCLASS" type="string"/>
+        
+        <natural-id mutable="false">
+            <many-to-one name="multiTenancyRealm" class="MultiTenancyRealm" column="MULTI_TENANCY_REALM_ID" not-null="true" fetch="join"/>
+
+            <property name="principalName"
+                type="string"
+                access="property"
+                column="PRINCIPAL_NAME"
+                length="256" />
+        </natural-id>
+                
+	    <version name="version" 
+	        column="VERSION" 
+	        type="java.lang.Integer"
+	        unsaved-value="null"/>
+                             
+        <property name="description"
+            type="string"
+            access="property"
+            column="DESCRIPTION"
+            length="256" />
+
+        <property name="isDeletable"
+            type="boolean"
+            access="property"
+            column="IS_DELETABLE"/>
+
+        <property name="isModifiable"
+            type="boolean"
+            access="property"
+            column="IS_MODIFIABLE"/>
+
+        <subclass name="AbstractUser" discriminator-value="AbstractUser">
+        
+	        <subclass name="SecurityUser" discriminator-value="SecurityUser">
+	            <property name="firstName"
+	                type="string"
+	                access="property"
+	                column="FIRST_NAME"
+	                length="256" />
+	                
+	            <property name="lastName"
+	                type="string"
+	                access="property"
+	                column="LAST_NAME"
+	                length="256" />
+
+	            <property name="primaryEmailAddress"
+	                type="string"
+	                access="property"
+	                column="PRIMARY_EMAIL_ADDRESS"
+	                length="256" />
+	            
+	            <property name="numberUnsucccessfulLoginAttempts"
+	                type="int"
+	                access="property"
+	                column="NUM_INVALID_LOGINS" />
+	            
+	            <property name="isAccountLocked"
+	                type="boolean"
+	                access="property"
+	                column="IS_ACCOUNT_LOCKED" />
+	                        
+	            <set name="passwords" table="PASSWORD" order-by="CREATION_DATE" cascade="all" fetch="join" inverse="true" lazy="false" optimistic-lock="false"> 
+	                <cache usage="nonstrict-read-write" />
+	                <key column="SECURITY_PRINCIPAL_ID"/> 
+	                <one-to-many class="Password" not-found="exception"/>
+	            </set>
+	        </subclass>
+	
+	        <subclass name="SystemUser" discriminator-value="SystemUser">
+	            <property name="encodedPassword"
+	                type="string"
+	                access="property"
+	                column="ENCODED_PASSWORD"
+	                length="256" />
+	        </subclass>
+
+	        <subclass name="ShadowSecurityUser" discriminator-value="ShadowSecurityUser">
+	        </subclass>
+	        	        
+        </subclass>
+                
+        <subclass name="AbstractGroup" discriminator-value="AbstractGroup">
+        
+            <subclass name="SecurityGroup" discriminator-value="SecurityGroup">
+            
+                <property name="assignByDefault"
+                    type="boolean"
+                    access="property"
+                    column="ASSIGN_BY_DEFAULT" />
+            
+                <many-to-one name="parentGroup" column="PARENT_SECURITY_GROUP_ID" fetch="join"/>
+            
+                <set name="memberUsers" table="SECURITY_GROUP_MEMBER" fetch="join" lazy="false" optimistic-lock="false">
+                   <cache usage="nonstrict-read-write" /> 
+                   <key column="SECURITY_GROUP_ID"/> 
+                   <many-to-many column="MEMBER_ABSTRACT_USER_ID" class="AbstractUser" not-found="ignore"/> 
+                </set>                 
+            </subclass>
+
+            <subclass name="ShadowSecurityGroup" discriminator-value="ShadowSecurityGroup">
+            </subclass>
+            
+        </subclass>
+                        
+    </class>
+</hibernate-mapping>

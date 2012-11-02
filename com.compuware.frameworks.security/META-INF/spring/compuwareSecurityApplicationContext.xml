@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns="http://www.springframework.org/schema/beans"  
+    xmlns:security="http://www.springframework.org/schema/security"  
+    xmlns:p="http://www.springframework.org/schema/p"      
+    xmlns:osgi="http://www.springframework.org/schema/osgi"
+    xsi:schemaLocation="http://www.springframework.org/schema/beans 
+        http://www.springframework.org/schema/beans/spring-beans-3.0.xsd
+        http://www.springframework.org/schema/security 
+        http://www.springframework.org/schema/security/spring-security-3.0.xsd
+        http://www.springframework.org/schema/osgi
+        http://www.springframework.org/schema/osgi/spring-osgi.xsd        
+        ">  
+
+
+
+   <!-- ************************************************************************************ -->
+   <!-- Bootstrap bean class.  This is used for clients that want to access services via the -->
+   <!-- singleton instance here, that is accessible outside of Spring via the:               -->
+   <!--                                                                                      -->
+   <!--    CompuwareSecurity.getInstance()                                                     -->
+   <!--                                                                                      -->
+   <!-- call. It is preferred, however, that clients use the Spring/OSGi approach            -->
+   <!-- (i.e. import the Spring beans as OSGi "services" that are exported here:             -->
+   <!--    OSGi Service ID                     Interface                                     -->
+   <!--    ================================================================================= -->
+   <!--    compuwareSecurityConfiguration      com.compuware.frameworks.security.api.configuration.ICompuwareSecurity                                           -->
+   <!-- ************************************************************************************ -->
+   <bean 
+      id="compuwareSecurity" 
+      class="com.compuware.frameworks.security.CompuwareSecurity" 
+      scope="singleton">
+   </bean>	
+
+
+
+   <!-- ************************************************************************************ -->
+   <!-- Local bean definitions for this layer ("core")                                       -->
+   <!-- ************************************************************************************ -->
+   <!-- These property files will be located in the OSGi "instance area", which is encapsulated by JFWUtil.getInstanceArea(). -->
+   <bean 
+      id="compuwareSecurityConfigurationPersistor" 
+      class="com.compuware.frameworks.security.configuration.persistence.file.CompuwareSecurityConfigurationFilePersistor"
+      scope="singleton">
+      <constructor-arg index="0" value="compuwareSecurityJdbcConfiguration.properties" />  
+      <constructor-arg index="1" value="compuwareSecurityLdapConfiguration.properties" />  
+   </bean>  
+   
+   <bean 
+      id="compuwareSecurityConfiguration" 
+      class="com.compuware.frameworks.security.configuration.impl.CompuwareSecurityConfigurationImpl" 
+      scope="singleton">  
+      <constructor-arg index="0" ref="compuwareSecurityConfigurationPersistor" />
+   </bean>  
+
+
+   
+   <!-- ************************************************************************************ -->
+   <!-- OSGi exports that are consumed by upper layers                                       -->
+   <!-- ************************************************************************************ -->   
+   <osgi:service 
+      id="compuwareSecurityBean"
+      ref="compuwareSecurity" 
+      interface="com.compuware.frameworks.security.api.ICompuwareSecurity"/>
+   
+   <osgi:service 
+      id="compuwareSecurityConfigurationBean"
+      ref="compuwareSecurityConfiguration" 
+      interface="com.compuware.frameworks.security.api.configuration.ICompuwareSecurityConfiguration"/>
+   
+</beans>

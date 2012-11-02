@@ -1,0 +1,78 @@
+<?xml version="1.0"?>
+<!DOCTYPE hibernate-mapping PUBLIC
+        "-//Hibernate/Hibernate Mapping DTD 3.0//EN"
+        "http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
+
+<hibernate-mapping package="com.compuware.frameworks.security.service.api.model" default-lazy="false">
+
+    <class name="MultiTenancyRealm" table="MULTI_TENANCY_REALM">
+
+        <cache usage="nonstrict-read-write" />
+
+        <id name="multiTenancyRealmId" 
+            column="MULTI_TENANCY_REALM_ID" 
+            unsaved-value="null" 
+            type="java.lang.Long"> 
+            <generator class="native" /> 
+        </id>
+        
+        <natural-id mutable="false">
+            <property name="realmName"
+                type="string"
+                access="property"
+                column="REALM_NAME"
+                length="256" />
+        </natural-id>
+        
+	    <version name="version" 
+	        column="VERSION" 
+	        type="java.lang.Integer"
+	        unsaved-value="null"/>
+                             
+        <property name="description"
+            type="string"
+            access="property"
+            column="DESCRIPTION"
+            length="256" />
+
+        <property name="ldapBaseDn"
+            type="string"
+            access="property"
+            column="LDAP_BASE_DN"
+            length="256" />
+
+        <property name="minimumUsernameLength"
+            type="int"
+            access="property"
+            column="MINIMUM_USERNAME_LENGTH"/>
+
+        <property name="minimumGroupnameLength"
+            type="int"
+            access="property"
+            column="MINIMUM_GROUPNAME_LENGTH"/>
+
+        <property name="isDeletable"
+            type="boolean"
+            access="property"
+            column="IS_DELETABLE"/>
+
+        <property name="isModifiable"
+            type="boolean"
+            access="property"
+            column="IS_MODIFIABLE"/>
+
+        <property name="activePasswordPolicyName"
+            type="string"
+            access="property"
+            column="ACTIVE_PASSWORD_POLICY_NAME"
+            length="256" />
+
+        <set name="passwordPolicies" table="PASSWORD_POLICY" order-by="NAME" cascade="all-delete-orphan" fetch="join" inverse="true" lazy="false" optimistic-lock="false">
+            <cache usage="nonstrict-read-write" /> 
+            <key column="MULTI_TENANCY_REALM_ID"/> 
+            <one-to-many class="PasswordPolicy" not-found="ignore"/> 
+        </set>
+
+    </class>
+
+</hibernate-mapping>
